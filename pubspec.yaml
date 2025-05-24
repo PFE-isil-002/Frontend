@@ -43,6 +43,7 @@ dependencies:
   flutter_svg: ^2.1.0
   model_viewer_plus: ^1.9.2
   fl_chart: ^0.71.0
+  geoengine: ^1.0.3
 
 dev_dependencies:
   flutter_test:

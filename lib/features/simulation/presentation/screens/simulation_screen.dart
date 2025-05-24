@@ -22,7 +22,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
     'RNN',
     'Random Forest'
   ];
-  final simulationTypes = ['Normal', 'Man in the Middle', 'Outsider Drone'];
+  final simulationTypes = ['Normal', 'mitm', 'Outsider Drone'];
 
   String selectedModel = 'KNN';
   String selectedSimulation = 'Normal';
