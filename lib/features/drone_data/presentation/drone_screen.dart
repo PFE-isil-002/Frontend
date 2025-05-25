@@ -1229,7 +1229,7 @@ class TelemetryChart extends StatelessWidget {
                               label = tertiaryLabel!;
                             }
                             return LineTooltipItem(
-                              '${label}: ${barSpot.y.toStringAsFixed(2)}',
+                              '$label: ${barSpot.y.toStringAsFixed(2)}',
                               TextStyle(
                                 color: barSpot.bar.color,
                                 fontWeight: FontWeight.bold,
