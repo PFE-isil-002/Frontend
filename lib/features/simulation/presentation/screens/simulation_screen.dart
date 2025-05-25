@@ -1,3 +1,5 @@
+// lib/features/simulation/presentation/pages/simulation_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
@@ -7,7 +9,7 @@ import '../../domain/entities/drone_data.dart';
 import '../blocs/simulation_state.dart';
 import '../widgets/drone_map.dart';
 import '../widgets/drone_info_card.dart';
-import '../blocs/simulation_bloc.dart'; // Make sure this import is correct
+import '../blocs/simulation_bloc.dart';
 
 class SimulationScreen extends StatefulWidget {
   const SimulationScreen({super.key});
@@ -36,17 +38,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
   bool isSelectingStart = false;
   bool isSelectingEnd = false;
 
-  // Static values for velocity, duration, and step
   static const double velocity = 5.0; // m/s
   static const double duration = 300.0; // seconds
   static const double step = 0.1; // seconds
 
-  // Define reference coordinates for conversion
   static const double referenceLat = 36.7131;
   static const double referenceLon = 3.1793;
   late final PositionConverter _positionConverter;
 
-  // Theme constants
   static const Color primaryDark = Color(0xFF0F0F0F);
   static const Color secondaryDark = Color(0xFF1A1A1A);
   static const Color cardDark = Color(0xFF2A2A2A);
@@ -64,13 +63,69 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
+  // Function to show the anomaly detection pop-up
+  void _showAnomalyDialog(bool anomalyDetected) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must tap button to close
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: cardDark,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Row(
+            children: [
+              Icon(
+                anomalyDetected ? Icons.warning : Icons.check_circle,
+                color: anomalyDetected ? Colors.red : tealPrimary,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                anomalyDetected ? 'Anomaly Detected!' : 'Simulation Complete',
+                style: const TextStyle(
+                    color: textPrimary, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            anomalyDetected
+                ? 'Anomaly detected, flight suspected. Please review logs.'
+                : 'No anomaly detected, clear flight. The drone followed its intended path.',
+            style: const TextStyle(color: textSecondary),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'OK',
+                style:
+                    TextStyle(color: tealPrimary, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Dismiss the dialog
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: primaryDark,
-      body: BlocBuilder<SimulationBloc, SimulationState>(
+      body: BlocConsumer<SimulationBloc, SimulationState>(
+        listener: (context, state) {
+          // Listen for anomalyDetected changes
+          if (state.anomalyDetected != null) {
+            setState(() {
+              _isRunning =
+                  false; // Stop running state when prediction is complete
+            });
+            _showAnomalyDialog(state.anomalyDetected!);
+          }
+        },
         builder: (context, simulationState) {
-          // Auto-select the first drone if available and none is selected
           if (selectedDrone == null &&
               simulationState.droneDataList.isNotEmpty) {
             selectedDrone = simulationState.droneDataList.first;
@@ -78,7 +133,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
           return Column(
             children: [
-              // Enhanced header with proper responsive layout
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -94,8 +148,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 ),
                 child: _buildHeaderContent(context),
               ),
-
-              // Main content area
               Expanded(
                 child: Container(
                   color: primaryDark,
@@ -103,7 +155,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     children: [
                       DroneMap(
                         droneDataList: simulationState
-                            .droneDataList, // Pass from simulationState
+                            .droneDataList, // <-- This is the key
                         referenceLat: referenceLat,
                         referenceLon: referenceLon,
                         onMapTap: (LatLng point) {
@@ -119,14 +171,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         },
                         startPoint: startPoint,
                         endPoint: endPoint,
-                        collectedWaypoints: simulationState
-                            .collectedWaypoints, // Pass collected waypoints
+                        collectedWaypoints: simulationState.collectedWaypoints,
                       ),
-
-                      // Status indicators
                       _buildStatusIndicators(),
-
-                      // Drone info card (shown when a drone is selected)
                       if (selectedDrone != null)
                         Positioned(
                           top: 16,
@@ -147,9 +194,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
   Widget _buildHeaderContent(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Use wrap for smaller screens, row for larger ones
         if (constraints.maxWidth < 700) {
-          // Reduced breakpoint since we have fewer controls
           return _buildCompactHeader(context);
         } else {
           return _buildFullHeader(context);
@@ -404,7 +449,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 });
                 bloc.stopSimulation();
               } else {
-                // Convert LatLng to x,y,z coordinates
                 final startXYZ = _positionConverter.convertToXY(
                     startPoint!.latitude, startPoint!.longitude);
                 final endXYZ = _positionConverter.convertToXY(
@@ -417,20 +461,19 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   modelType: selectedModel.toLowerCase(),
                   simulationType:
                       selectedSimulation.toLowerCase().replaceAll(' ', '_'),
-                  duration: duration, // Using static value
-                  step: step, // Using static value
-                  velocity: velocity, // Using static value
+                  duration: duration,
+                  step: step,
+                  velocity: velocity,
                   startPoint: {
                     'x': startXYZ['x']!,
                     'y': startXYZ['y']!,
-                    'z': -5.0, // Assuming a fixed Z for now
+                    'z': -5.0,
                   },
                   endPoint: {
                     'x': endXYZ['x']!,
                     'y': endXYZ['y']!,
-                    'z': -5.0, // Assuming a fixed Z for now
+                    'z': -5.0,
                   },
-                  // Example fixed waypoints - you might want to make these dynamic
                   waypoints: const [
                     {'x': 15.0, 'y': 10.0, 'z': -5.0},
                     {'x': 35.0, 'y': 20.0, 'z': -5.0},

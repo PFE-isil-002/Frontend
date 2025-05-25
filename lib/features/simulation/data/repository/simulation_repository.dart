@@ -1,4 +1,5 @@
-// simulation_repository.dart
+// lib/features/simulation/data/repository/simulation_repository.dart
+
 import 'dart:async';
 import 'dart:convert';
 import '../../../../core/websockets/websocket_client.dart';
@@ -16,9 +17,8 @@ class SimulationRepository {
     required double velocity,
     required Map<String, double> startPoint,
     required Map<String, double> endPoint,
-    List<Map<String, double>>? waypoints, // Optional waypoints
+    List<Map<String, double>>? waypoints,
   }) {
-    // Send the start message over WebSocket
     final payload = {
       'type': 'start_simulation',
       'data': {
@@ -29,8 +29,7 @@ class SimulationRepository {
         'velocity': velocity,
         'start_point': startPoint,
         'end_point': endPoint,
-        if (waypoints != null)
-          'waypoints': waypoints, // Add waypoints if provided
+        if (waypoints != null) 'waypoints': waypoints,
       }
     };
     client.send(payload);
@@ -38,19 +37,20 @@ class SimulationRepository {
     // Create a new stream controller to manage the paced emission of events
     final _controller = StreamController<Map<String, dynamic>>();
 
-    // Subscribe to the raw WebSocket stream
+    // Listen to the raw WebSocket stream and apply delay before re-emitting
     client.stream
         .map((event) => event as String)
         .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
         .where((msg) =>
-            msg['type'] == 'drone_data' || msg['type'] == 'waypoint_collected')
+            msg['type'] == 'drone_data' ||
+            msg['type'] == 'waypoint_collected' ||
+            msg['type'] ==
+                'batch_prediction_complete') // Listen for prediction complete
         .listen((data) async {
-      // Introduce the delay before adding the data to the controller's stream
-      // This ensures that the data is *emitted* from this stream slowly.
+      // Apply delay only for 'drone_data' messages
       if (data['type'] == 'drone_data') {
-        await Future.delayed(const Duration(
-            milliseconds:
-                200)); // Adjust this value (e.g., 200ms for a noticeable delay)
+        await Future.delayed(
+            const Duration(milliseconds: 100)); // Adjust this value
       }
       _controller.add(data);
     }, onDone: () {
@@ -62,7 +62,6 @@ class SimulationRepository {
     return _controller.stream; // Return the controlled stream
   }
 
-  /// Sends the simulation stop command.
   void stopSimulation() {
     final payload = {'type': 'stop_simulation', 'data': {}};
     client.send(payload);
