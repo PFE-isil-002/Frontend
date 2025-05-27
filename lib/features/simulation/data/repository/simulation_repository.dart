@@ -35,7 +35,7 @@ class SimulationRepository {
     client.send(payload);
 
     // Create a new stream controller to manage the paced emission of events
-    final _controller = StreamController<Map<String, dynamic>>();
+    final controller = StreamController<Map<String, dynamic>>();
 
     // Listen to the raw WebSocket stream and apply delay before re-emitting
     client.stream
@@ -52,14 +52,14 @@ class SimulationRepository {
         await Future.delayed(
             const Duration(milliseconds: 100)); // Adjust this value
       }
-      _controller.add(data);
+      controller.add(data);
     }, onDone: () {
-      _controller.close();
+      controller.close();
     }, onError: (error) {
-      _controller.addError(error);
+      controller.addError(error);
     });
 
-    return _controller.stream; // Return the controlled stream
+    return controller.stream; // Return the controlled stream
   }
 
   void stopSimulation() {

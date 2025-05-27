@@ -179,8 +179,6 @@ class DroneMap extends StatelessWidget {
               }()
             ],
           ),
-
-        // Current drone position (SVG icon) - this is the main moving drone
         if (latestDrone != null)
           MarkerLayer(
             markers: [
@@ -227,19 +225,16 @@ class DroneMap extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Fallback icon in case SVG fails to load
             Icon(
               Icons.airplanemode_active,
               color: Colors.teal,
               size: 24,
             ),
-            // SVG overlay - will show if the asset exists and loads successfully
             SvgPicture.asset(
               "assets/images/logo.svg",
               width: 32,
               height: 32,
               fit: BoxFit.contain,
-              // Add error handling
               placeholderBuilder: (BuildContext context) => Icon(
                 Icons.airplanemode_active,
                 color: Colors.teal,
