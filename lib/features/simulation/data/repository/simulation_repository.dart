@@ -1,5 +1,3 @@
-// lib/features/simulation/data/repository/simulation_repository.dart
-
 import 'dart:async';
 import 'dart:convert';
 import '../../../../core/websockets/websocket_client.dart';
@@ -40,30 +38,42 @@ class SimulationRepository {
     // Listen to the raw WebSocket stream and apply delay before re-emitting
     client.stream
         .map((event) => event as String)
-        .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
-        .where((msg) =>
-            msg['type'] == 'drone_data' ||
-            msg['type'] == 'waypoint_collected' ||
-            msg['type'] ==
-                'batch_prediction_complete') // Listen for prediction complete
-        .listen((data) async {
-      // Apply delay only for 'drone_data' messages
-      if (data['type'] == 'drone_data') {
-        await Future.delayed(
-            const Duration(milliseconds: 100)); // Adjust this value
-      }
-      controller.add(data);
-    }, onDone: () {
-      controller.close();
-    }, onError: (error) {
-      controller.addError(error);
-    });
+        .map((raw) {
+          print('Raw WebSocket message: $raw'); // Debug: Log raw message
+          try {
+            return jsonDecode(raw) as Map<String, dynamic>;
+          } catch (e) {
+            print('Error decoding JSON: $e');
+            rethrow;
+          }
+        })
+        .listen((msg) async {
+          print('Decoded message: $msg'); // Debug: Log decoded message
+          print('Message type: ${msg['type']}'); // Debug: Log message type
+          
+          // Check if message type is one we want to handle
+          final messageType = msg['type'];
+          if (messageType == 'drone_data' ||
+              messageType == 'waypoint_collected' ||
+              messageType == 'batch_prediction_complete' ||
+              messageType == 'outsider_status') {
+            print('Processing message of type: $messageType'); // Debug: Confirm processing
+            controller.add(msg);
+          } else {
+            print('Ignoring message of type: $messageType'); // Debug: Log ignored messages
+          }
+        }, onDone: () {
+          print('WebSocket stream closed');
+          controller.close();
+        }, onError: (error) {
+          print('WebSocket stream error: $error');
+          controller.addError(error);
+        });
 
-    return controller.stream; // Return the controlled stream
+    return controller.stream;
   }
 
   void stopSimulation() {
-    final payload = {'type': 'stop_simulation', 'data': {}};
-    client.send(payload);
+    client.send({'type': 'stop_simulation'});
   }
 }

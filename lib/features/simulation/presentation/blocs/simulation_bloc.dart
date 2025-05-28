@@ -1,5 +1,3 @@
-// lib/features/simulation/presentation/blocs/simulation_bloc.dart
-
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
@@ -11,9 +9,9 @@ import 'simulation_state.dart';
 class SimulationBloc extends Cubit<SimulationState> {
   final SimulationRepository repository;
   StreamSubscription<Map<String, dynamic>>? _subscription;
-  String? _currentSimulationType; // Store the current simulation type
+  String? _currentSimulationType;
 
-  SimulationBloc(this.repository) : super(const SimulationState()); // Use const
+  SimulationBloc(this.repository) : super(const SimulationState());
 
   void startSimulation({
     required String modelType,
@@ -25,67 +23,132 @@ class SimulationBloc extends Cubit<SimulationState> {
     required Map<String, double> endPoint,
     List<Map<String, double>>? waypoints,
   }) {
-    // 1) clear any previous data and reset anomaly status
-    emit(const SimulationState()); // Emit an empty initial state with anomalyDetected = null
-    _currentSimulationType = simulationType; // Store the simulation type
+    // Clear any previous data and reset anomaly status
+    emit(const SimulationState());
+    _currentSimulationType = simulationType;
 
-    // 2) cancel old subscription (just in case)
+    // Cancel old subscription
     _subscription?.cancel();
 
-    // 3) new subscription on the broadcast stream
+    // New subscription on the broadcast stream
     _subscription = repository
         .startSimulation(
-          modelType: modelType,
-          simulationType: simulationType,
-          duration: duration,
-          step: step,
-          velocity: velocity,
-          startPoint: startPoint,
-          endPoint: endPoint,
-          waypoints: waypoints,
-        )
+      modelType: modelType,
+      simulationType: simulationType,
+      duration: duration,
+      step: step,
+      velocity: velocity,
+      startPoint: startPoint,
+      endPoint: endPoint,
+      waypoints: waypoints,
+    )
         .listen(
-      (message) async {
-        try {
-          final messageType = message['type'];
-          final messageData = message['data'] as Map<String, dynamic>;
-
-          if (messageType == 'drone_data') {
-            final droneData = DroneData.fromMap(messageData);
-            final updatedDroneDataList = List<DroneData>.from(state.droneDataList)..add(droneData);
-            emit(state.copyWith(droneDataList: updatedDroneDataList));
-          } else if (messageType == 'waypoint_collected') {
-            final waypointData = WaypointCollectedData.fromMap(messageData);
-            final newWaypoint = LatLng(
-                _positionConverter.convertToLatLon(waypointData.currentX, waypointData.currentY)['latitude']!,
-                _positionConverter.convertToLatLon(waypointData.currentX, waypointData.currentY)['longitude']!);
-            final updatedWaypoints = List<LatLng>.from(state.collectedWaypoints)..add(newWaypoint);
-            emit(state.copyWith(collectedWaypoints: updatedWaypoints));
-            print('Waypoint Collected: ${waypointData.waypointsCollected} at (${waypointData.currentX}, ${waypointData.currentY}, ${waypointData.currentZ})');
-          } else if (messageType == 'batch_prediction_complete') {
-            // Determine anomaly status based on the stored simulation type
-            final bool anomalyDetected = (_currentSimulationType == 'mitm' || _currentSimulationType == 'outsider_drone');
-            emit(state.copyWith(anomalyDetected: anomalyDetected));
-            print('Batch Prediction Complete. Anomaly Detected: $anomalyDetected');
-          }
-        } catch (e, st) {
-          print('Error processing WebSocket message: $e\n$st');
-        }
+      (message) {
+        _handleMessage(message);
       },
-      onError: (error, st) => print('Simulation stream error: $error\n$st'),
-      onDone: () => print('Simulation stream closed.'),
+      onError: (error, st) {
+        print('❌ Simulation stream error: $error');
+        print('Stack trace: $st');
+      },
+      onDone: () => print('✅ Simulation stream closed.'),
     );
   }
 
+  void _handleMessage(Map<String, dynamic> message) {
+    final messageType = message['type'];
+    print('📨 Processing message: $messageType');
+
+    try {
+      switch (messageType) {
+        case 'drone_data':
+          _handleDroneData(message);
+          break;
+        case 'waypoint_collected':
+          _handleWaypointCollected(message);
+          break;
+        case 'batch_prediction_complete':
+          _handleBatchPredictionComplete();
+          break;
+        case 'outsider_status':
+          _handleOutsiderStatus(message);
+          break;
+        default:
+          print('❓ Unknown message type: $messageType');
+      }
+    } catch (e, st) {
+      print('❌ Error processing message type $messageType: $e');
+      print('Stack trace: $st');
+      print('Raw message: $message');
+    }
+  }
+
+  void _handleDroneData(Map<String, dynamic> message) {
+    final droneData =
+        DroneData.fromMap(message['data'] as Map<String, dynamic>);
+    final updatedList = List<DroneData>.from(state.droneDataList)
+      ..add(droneData);
+    emit(state.copyWith(droneDataList: updatedList));
+    print('🚁 Updated drone data list, count: ${updatedList.length}');
+  }
+
+  void _handleWaypointCollected(Map<String, dynamic> message) {
+    final waypointData =
+        WaypointCollectedData.fromMap(message['data'] as Map<String, dynamic>);
+    final updatedWaypoints = List<LatLng>.from(state.collectedWaypoints);
+    final latLon = _positionConverter.convertToLatLon(
+        waypointData.currentX, waypointData.currentY);
+    updatedWaypoints.add(LatLng(latLon['latitude']!, latLon['longitude']!));
+    emit(state.copyWith(collectedWaypoints: updatedWaypoints));
+    print(
+        '📍 Waypoint ${waypointData.waypointsCollected} collected at (${waypointData.currentX}, ${waypointData.currentY}, ${waypointData.currentZ})');
+  }
+
+  void _handleBatchPredictionComplete() {
+    final bool anomalyDetected = (_currentSimulationType == 'mitm' ||
+        _currentSimulationType == 'outsider_drone' ||
+        _currentSimulationType == 'outsider');
+    emit(state.copyWith(anomalyDetected: anomalyDetected));
+    print('🔍 Batch prediction complete. Anomaly detected: $anomalyDetected');
+  }
+
+  void _handleOutsiderStatus(Map<String, dynamic> message) {
+    print('👤 Processing outsider status message...');
+
+    final data = message['data'] as Map<String, dynamic>?;
+    if (data == null) {
+      print('❌ Outsider status data is null');
+      return;
+    }
+
+    try {
+      final outsiderStatusData = OutsiderStatusData.fromMap(data);
+
+      // Update state with new outsider status
+      emit(state.copyWith(outsiderStatus: outsiderStatusData));
+
+      print('✅ Outsider status updated:');
+      print('   - Status: ${outsiderStatusData.status}');
+      print('   - Drone ID: ${outsiderStatusData.droneId}');
+      print(
+          '   - Position: (${outsiderStatusData.outsiderTelemetry.position.x}, ${outsiderStatusData.outsiderTelemetry.position.y}, ${outsiderStatusData.outsiderTelemetry.position.z})');
+      print('   - Battery: ${outsiderStatusData.outsiderTelemetry.battery}%');
+      print(
+          '   - Flight history points: ${outsiderStatusData.outsiderTelemetry.flightHistory.length}');
+    } catch (e, st) {
+      print('❌ Failed to parse outsider status:');
+      print('   Error: $e');
+      print('   Stack: $st');
+      print('   Raw data: $data');
+    }
+  }
+
   void stopSimulation() {
-    // 1) tell server
+    print('⏹️ Stopping simulation...');
     repository.stopSimulation();
-    // 2) cancel receipt
     _subscription?.cancel();
     _subscription = null;
-    // 3) clear data and reset anomaly status
-    emit(const SimulationState()); // Reset to initial state
-    _currentSimulationType = null; // Clear the simulation type
+    emit(const SimulationState());
+    _currentSimulationType = null;
   }
 
   @override

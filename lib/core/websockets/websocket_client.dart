@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketClient {
-  final String _url = 'ws://0c3d-129-45-28-3.ngrok-free.app/ws';
+  final String _url = 'ws://localhost:9000/ws';
   late final WebSocketChannel channel;
 
   WebSocketClient() {

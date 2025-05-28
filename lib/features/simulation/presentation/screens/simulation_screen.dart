@@ -1,5 +1,3 @@
-// lib/features/simulation/presentation/pages/simulation_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
@@ -172,6 +170,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         startPoint: startPoint,
                         endPoint: endPoint,
                         collectedWaypoints: simulationState.collectedWaypoints,
+                        outsiderStatus: simulationState
+                            .outsiderStatus, // Pass outsider status
                       ),
                       _buildStatusIndicators(),
                       if (selectedDrone != null)
@@ -457,10 +457,21 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 setState(() {
                   _isRunning = true;
                 });
+
+                // Determine the correct simulationType string for the backend
+                String simulationTypeToSend;
+                if (selectedSimulation == 'Outsider Drone') {
+                  simulationTypeToSend =
+                      'outsider'; // Backend expects 'outsider'
+                } else {
+                  simulationTypeToSend =
+                      selectedSimulation.toLowerCase().replaceAll(' ', '_');
+                }
+
                 bloc.startSimulation(
                   modelType: selectedModel.toLowerCase(),
                   simulationType:
-                      selectedSimulation.toLowerCase().replaceAll(' ', '_'),
+                      simulationTypeToSend, // Use the corrected simulationType
                   duration: duration,
                   step: step,
                   velocity: velocity,
