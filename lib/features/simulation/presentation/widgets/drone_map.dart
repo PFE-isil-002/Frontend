@@ -319,8 +319,8 @@ class _DroneMapState extends State<DroneMap> with TickerProviderStateMixin {
         return Transform.scale(
           scale: 1.0 + (_pulseController.value * 0.15),
           child: Container(
-            width: 40,
-            height: 40,
+            width: 25,
+            height: 25,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white,
@@ -340,7 +340,7 @@ class _DroneMapState extends State<DroneMap> with TickerProviderStateMixin {
                   Icon(
                     Icons.warning_amber,
                     color: iconColor,
-                    size: 24,
+                    size: 15,
                   ),
                 ],
               ),
@@ -362,17 +362,17 @@ class _DroneMapState extends State<DroneMap> with TickerProviderStateMixin {
             height: 50,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.purple, width: 2),
+              border: Border.all(color: Colors.teal, width: 2),
             ),
             child: ClipOval(
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // SVG without rotation for waypoint drone too
+                  SvgPicture.asset('assets/images/zone.svg'),
                   SvgPicture.asset(
                     "assets/images/logo.svg",
-                    width: 35,
-                    height: 35,
+                    width: 25,
+                    height: 25,
                     fit: BoxFit.contain,
                     placeholderBuilder: (BuildContext context) => const Icon(
                       Icons.airplanemode_active,
