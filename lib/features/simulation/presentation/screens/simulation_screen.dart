@@ -19,11 +19,11 @@ class SimulationScreen extends StatefulWidget {
 class _SimulationScreenState extends State<SimulationScreen> {
   final aiModels = [
     'KNN',
-    'Logistic Regression',
+    'Logistic_Regression',
     'SVM',
     'LSTM',
     'RNN',
-    'Random Forest'
+    'Random_Forest'
   ];
   final simulationTypes = ['Normal', 'MITM', 'Outsider Drone'];
 
@@ -36,8 +36,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
   bool isSelectingStart = false;
   bool isSelectingEnd = false;
 
-  static const double velocity = 5.0; // m/s
-  static const double duration = 300.0; // seconds
+  static const double velocity = 5.0;
+  static const double duration = 300.0;
   static const double step = 0.1; // seconds
 
   static const double referenceLat = 36.7131;
@@ -100,6 +100,72 @@ class _SimulationScreenState extends State<SimulationScreen> {
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop(); // Dismiss the dialog
+                // Clear the anomaly message after dismissing
+                context.read<SimulationBloc>().clearAnomalyDetectionMessage();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Function to show the outsider status pop-up
+  void _showOutsiderStatusDialog(String message) {
+    // Determine if it's blocked or authenticated
+    final bool isBlocked = message.toLowerCase().contains('blocked');
+    final bool isAuthenticated =
+        message.toLowerCase().contains('authenticated');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must tap button to close
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: cardDark,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Row(
+            children: [
+              Icon(
+                isBlocked
+                    ? Icons.block
+                    : isAuthenticated
+                        ? Icons.verified_user
+                        : Icons.info,
+                color: isBlocked
+                    ? Colors.red
+                    : isAuthenticated
+                        ? Colors.green
+                        : tealPrimary,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                isBlocked
+                    ? 'Outsider Drone Blocked!'
+                    : isAuthenticated
+                        ? 'Outsider Drone Authenticated!'
+                        : 'Outsider Drone Status',
+                style: const TextStyle(
+                    color: textPrimary, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(color: textSecondary),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'OK',
+                style:
+                    TextStyle(color: tealPrimary, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Dismiss the dialog
+                // Clear the outsider message after dismissing
+                context.read<SimulationBloc>().clearOutsiderSimulationMessage();
               },
             ),
           ],
@@ -121,6 +187,13 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   false; // Stop running state when prediction is complete
             });
             _showAnomalyDialog(state.anomalyDetected!);
+          }
+
+          // Listen for outsider simulation messages
+          if (state.outsiderSimulationMessage != null) {
+            print(
+                '🎯 UI received outsider message: ${state.outsiderSimulationMessage}'); // Debug print
+            _showOutsiderStatusDialog(state.outsiderSimulationMessage!);
           }
         },
         builder: (context, simulationState) {

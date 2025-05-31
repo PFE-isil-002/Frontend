@@ -9,7 +9,6 @@ import 'simulation_state.dart';
 class SimulationBloc extends Cubit<SimulationState> {
   final SimulationRepository repository;
   StreamSubscription<Map<String, dynamic>>? _subscription;
-  String? _currentSimulationType;
 
   SimulationBloc(this.repository) : super(const SimulationState());
 
@@ -23,9 +22,8 @@ class SimulationBloc extends Cubit<SimulationState> {
     required Map<String, double> endPoint,
     List<Map<String, double>>? waypoints,
   }) {
-    // Clear any previous data and reset anomaly status
+    // Clear any previous data and reset anomaly status and messages
     emit(const SimulationState());
-    _currentSimulationType = simulationType;
 
     // Cancel old subscription
     _subscription?.cancel();
@@ -49,6 +47,7 @@ class SimulationBloc extends Cubit<SimulationState> {
       onError: (error, st) {
         print('❌ Simulation stream error: $error');
         print('Stack trace: $st');
+        emit(state.copyWith(anomalyDetectionMessage: 'Simulation error: $error'));
       },
       onDone: () => print('✅ Simulation stream closed.'),
     );
@@ -67,7 +66,7 @@ class SimulationBloc extends Cubit<SimulationState> {
           _handleWaypointCollected(message);
           break;
         case 'batch_prediction_complete':
-          _handleBatchPredictionComplete();
+          _handleBatchPredictionComplete(message); // Pass the message
           break;
         case 'outsider_status':
           _handleOutsiderStatus(message);
@@ -79,6 +78,7 @@ class SimulationBloc extends Cubit<SimulationState> {
       print('❌ Error processing message type $messageType: $e');
       print('Stack trace: $st');
       print('Raw message: $message');
+      emit(state.copyWith(anomalyDetectionMessage: 'Error processing data: $e'));
     }
   }
 
@@ -103,11 +103,21 @@ class SimulationBloc extends Cubit<SimulationState> {
         '📍 Waypoint ${waypointData.waypointsCollected} collected at (${waypointData.currentX}, ${waypointData.currentY}, ${waypointData.currentZ})');
   }
 
-  void _handleBatchPredictionComplete() {
-    final bool anomalyDetected = (_currentSimulationType == 'mitm' ||
-        _currentSimulationType == 'outsider_drone' ||
-        _currentSimulationType == 'outsider');
-    emit(state.copyWith(anomalyDetected: anomalyDetected));
+  void _handleBatchPredictionComplete(Map<String, dynamic> message) {
+    final data = message['data'] as Map<String, dynamic>?;
+    if (data == null) {
+      print('❌ batch_prediction_complete data is null');
+      return;
+    }
+
+    // Assuming the 'batch_prediction_complete' message contains an 'anomaly_detected' field
+    final bool anomalyDetected = data['anomaly_detected'] as bool? ?? false;
+    emit(state.copyWith(
+      anomalyDetected: anomalyDetected,
+      anomalyDetectionMessage: anomalyDetected
+          ? 'Anomaly detected!'
+          : 'No anomaly detected.',
+    ));
     print('🔍 Batch prediction complete. Anomaly detected: $anomalyDetected');
   }
 
@@ -134,11 +144,25 @@ class SimulationBloc extends Cubit<SimulationState> {
       print('   - Battery: ${outsiderStatusData.outsiderTelemetry.battery}%');
       print(
           '   - Flight history points: ${outsiderStatusData.outsiderTelemetry.flightHistory.length}');
+
+      // Check for final outsider status and trigger pop-up
+      if (outsiderStatusData.status == 'blocked') {
+        print('🚨 Outsider drone BLOCKED! Emitting pop-up message.'); // Debug print
+        emit(state.copyWith(
+            outsiderSimulationMessage:
+                'Outsider Drone Status: BLOCKED! Drone ID: ${outsiderStatusData.droneId}'));
+      } else if (outsiderStatusData.status == 'authenticated') {
+        print('✅ Outsider drone AUTHENTICATED! Emitting pop-up message.'); // Debug print
+        emit(state.copyWith(
+            outsiderSimulationMessage:
+                'Outsider Drone Status: AUTHENTICATED! Drone ID: ${outsiderStatusData.droneId}'));
+      }
     } catch (e, st) {
       print('❌ Failed to parse outsider status:');
       print('   Error: $e');
       print('   Stack: $st');
       print('   Raw data: $data');
+      emit(state.copyWith(outsiderSimulationMessage: 'Error parsing outsider status: $e'));
     }
   }
 
@@ -147,8 +171,17 @@ class SimulationBloc extends Cubit<SimulationState> {
     repository.stopSimulation();
     _subscription?.cancel();
     _subscription = null;
-    emit(const SimulationState());
-    _currentSimulationType = null;
+    emit(const SimulationState()); // Reset state completely
+  }
+
+  // Method to acknowledge and clear anomaly detection message
+  void clearAnomalyDetectionMessage() {
+    emit(state.copyWith(anomalyDetectionMessage: null));
+  }
+
+  // Method to acknowledge and clear outsider simulation message
+  void clearOutsiderSimulationMessage() {
+    emit(state.copyWith(outsiderSimulationMessage: null));
   }
 
   @override

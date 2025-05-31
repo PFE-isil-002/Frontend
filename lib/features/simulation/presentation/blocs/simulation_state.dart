@@ -6,28 +6,34 @@ class SimulationState extends Equatable {
   final List<DroneData> droneDataList;
   final List<LatLng> collectedWaypoints;
   final bool? anomalyDetected; // null, true, or false
-  final OutsiderStatusData?
-      outsiderStatus; // Already nullable, no change needed here.
+  final OutsiderStatusData? outsiderStatus;
+  final String? anomalyDetectionMessage; // New: Message for anomaly pop-up
+  final String? outsiderSimulationMessage; // New: Message for outsider status pop-up
 
   const SimulationState({
     this.droneDataList = const [],
     this.collectedWaypoints = const [],
     this.anomalyDetected,
-    this.outsiderStatus, // Initialize the new field
+    this.outsiderStatus,
+    this.anomalyDetectionMessage, // Initialize new field
+    this.outsiderSimulationMessage, // Initialize new field
   });
 
   SimulationState copyWith({
     List<DroneData>? droneDataList,
     List<LatLng>? collectedWaypoints,
     bool? anomalyDetected,
-    OutsiderStatusData? outsiderStatus, // Add to copyWith
+    OutsiderStatusData? outsiderStatus,
+    String? anomalyDetectionMessage, // Add to copyWith
+    String? outsiderSimulationMessage, // Add to copyWith
   }) {
     return SimulationState(
       droneDataList: droneDataList ?? this.droneDataList,
       collectedWaypoints: collectedWaypoints ?? this.collectedWaypoints,
       anomalyDetected: anomalyDetected ?? this.anomalyDetected,
-      outsiderStatus:
-          outsiderStatus ?? this.outsiderStatus, // Copy the new field
+      outsiderStatus: outsiderStatus ?? this.outsiderStatus,
+      anomalyDetectionMessage: anomalyDetectionMessage, // Allow null to clear message
+      outsiderSimulationMessage: outsiderSimulationMessage, // Allow null to clear message
     );
   }
 
@@ -36,6 +42,8 @@ class SimulationState extends Equatable {
         droneDataList,
         collectedWaypoints,
         anomalyDetected,
-        outsiderStatus, // Add to props
+        outsiderStatus,
+        anomalyDetectionMessage, // Add to props
+        outsiderSimulationMessage, // Add to props
       ];
 }
