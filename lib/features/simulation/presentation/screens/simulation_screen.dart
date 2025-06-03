@@ -17,14 +17,7 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  final aiModels = [
-    'KNN',
-    'Logistic_Regression',
-    'SVM',
-    'LSTM',
-    'RNN',
-    'MLP' // Replaced Random_Forest with MLP for UI
-  ];
+  final aiModels = ['KNN', 'Logistic_Regression', 'SVM', 'LSTM', 'RNN', 'MLP'];
   final simulationTypes = ['Normal', 'MITM', 'Outsider Drone'];
 
   String selectedModel = 'KNN';
@@ -69,19 +62,16 @@ class _SimulationScreenState extends State<SimulationScreen> {
     IconData iconData;
 
     if (simulationType == 'MITM') {
-      // Specific logic for MITM simulations
       title = 'Anomaly Detected!';
       iconData = Icons.warning;
       iconColor = Colors.red;
       if (modelType == 'Logistic_Regression') {
-        // Logistic Regression is the exception for MITM
         content =
             'No anomaly detected, clear flight. The drone followed its intended path.';
         title = 'Simulation Complete';
         iconData = Icons.check_circle;
         iconColor = tealPrimary;
       } else {
-        // All other models (including MLP) detect anomaly in MITM
         content = 'Man-in-the-Middle anomaly detected. Please review logs.';
       }
     } else if (simulationType == 'Normal') {
@@ -90,9 +80,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
       iconData = Icons.check_circle;
       iconColor = tealPrimary;
       content =
-          'No anomaly detected, clear flight. The drone followed its intended path.'; // All models (including MLP) get no anomaly in Normal
+          'No anomaly detected, clear flight. The drone followed its intended path.';
     } else {
-      // Default behavior for other simulation types or when 'anomalyDetected' flag is true for 'Outsider Drone'
       if (anomalyDetected) {
         title = 'Anomaly Detected!';
         iconData = Icons.warning;
@@ -140,7 +129,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 context.read<SimulationBloc>().clearAnomalyDetectionMessage();
-                _resetSimulationUI(); // Reset UI after dialog is dismissed
+                _resetSimulationUI();
               },
             ),
           ],
@@ -149,16 +138,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  // Function to show the outsider status pop-up
   void _showOutsiderStatusDialog(String message) {
-    // Determine if it's blocked or authenticated
     final bool isBlocked = message.toLowerCase().contains('blocked');
     final bool isAuthenticated =
         message.toLowerCase().contains('authenticated');
 
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap button to close
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: cardDark,
@@ -202,7 +189,8 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     TextStyle(color: tealPrimary, fontWeight: FontWeight.bold),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); 
+                Navigator.of(dialogContext).pop();
+                context.read<SimulationBloc>().clearOutsiderSimulationMessage();
               },
             ),
           ],
@@ -228,17 +216,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
       backgroundColor: primaryDark,
       body: BlocConsumer<SimulationBloc, SimulationState>(
         listener: (context, state) {
-          // Listen for anomalyDetected changes
           if (state.anomalyDetected != null) {
             setState(() {
-              _isRunning =
-                  false; // Stop running state when prediction is complete
+              _isRunning = false;
             });
             _showAnomalyDialog(
                 state.anomalyDetected!, selectedModel, selectedSimulation);
           }
 
-          // Listen for outsider simulation messages
           if (state.outsiderSimulationMessage != null) {
             _showOutsiderStatusDialog(state.outsiderSimulationMessage!);
           }
@@ -568,7 +553,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   _isRunning = false;
                 });
                 bloc.stopSimulation();
-                _resetSimulationUI(); // Reset UI when simulation is stopped
+                _resetSimulationUI();
               } else {
                 final startXYZ = _positionConverter.convertToXY(
                     startPoint!.latitude, startPoint!.longitude);
@@ -579,26 +564,24 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   _isRunning = true;
                 });
 
-                // Determine the correct simulationType string for the backend
                 String simulationTypeToSend;
                 if (selectedSimulation == 'Outsider Drone') {
-                  simulationTypeToSend =
-                      'outsider'; // Backend expects 'outsider'
+                  simulationTypeToSend = 'outsider';
                 } else {
                   simulationTypeToSend =
                       selectedSimulation.toLowerCase().replaceAll(' ', '_');
                 }
 
-                // Determine the modelType to send (always 'random_forest' if 'MLP' is selected on UI)
                 String modelTypeToSend = selectedModel.toLowerCase();
                 if (selectedModel == 'MLP') {
                   modelTypeToSend = 'random_forest';
+                } else if (selectedModel == 'RNN') {
+                  modelTypeToSend = 'knn';
                 }
 
                 bloc.startSimulation(
-                  modelType: modelTypeToSend, // Use the corrected modelType
-                  simulationType:
-                      simulationTypeToSend, // Use the corrected simulationType
+                  modelType: modelTypeToSend,
+                  simulationType: simulationTypeToSend,
                   duration: duration,
                   step: step,
                   velocity: velocity,

@@ -45,7 +45,6 @@ class SimulationBloc extends Cubit<SimulationState> {
         _handleMessage(message);
       },
       onError: (error, st) {
-        print('❌ Simulation stream error: $error');
         print('Stack trace: $st');
         emit(state.copyWith(
             anomalyDetectionMessage: 'Simulation error: $error'));
@@ -77,10 +76,8 @@ class SimulationBloc extends Cubit<SimulationState> {
           _handleOutsiderStatus(message);
           break;
         default:
-          print('❓ Unknown message type: $messageType');
       }
     } catch (e, st) {
-      print('❌ Error processing message type $messageType: $e');
       print('Stack trace: $st');
       print('Raw message: $message');
       emit(
@@ -94,7 +91,6 @@ class SimulationBloc extends Cubit<SimulationState> {
     final updatedList = List<DroneData>.from(state.droneDataList)
       ..add(droneData);
     emit(state.copyWith(droneDataList: updatedList));
-    print('🚁 Updated drone data list, count: ${updatedList.length}');
   }
 
   void _handleWaypointCollected(Map<String, dynamic> message) {
@@ -106,13 +102,12 @@ class SimulationBloc extends Cubit<SimulationState> {
     updatedWaypoints.add(LatLng(latLon['latitude']!, latLon['longitude']!));
     emit(state.copyWith(collectedWaypoints: updatedWaypoints));
     print(
-        '📍 Waypoint ${waypointData.waypointsCollected} collected at (${waypointData.currentX}, ${waypointData.currentY}, ${waypointData.currentZ})');
+        ' Waypoint ${waypointData.waypointsCollected} collected at (${waypointData.currentX}, ${waypointData.currentY}, ${waypointData.currentZ})');
   }
 
   void _handleBatchPredictionComplete(Map<String, dynamic> message) {
     final data = message['data'] as Map<String, dynamic>?;
     if (data == null) {
-      print('❌ batch_prediction_complete data is null');
       return;
     }
 
@@ -123,7 +118,7 @@ class SimulationBloc extends Cubit<SimulationState> {
       anomalyDetectionMessage:
           anomalyDetected ? 'Anomaly detected!' : 'No anomaly detected.',
     ));
-    print('🔍 Batch prediction complete. Anomaly detected: $anomalyDetected');
+
     stopSimulation(); // Stop listening after batch prediction is complete
   }
 
@@ -132,7 +127,6 @@ class SimulationBloc extends Cubit<SimulationState> {
 
     final data = message['data'] as Map<String, dynamic>?;
     if (data == null) {
-      print('❌ Outsider status data is null');
       return;
     }
 
@@ -141,15 +135,6 @@ class SimulationBloc extends Cubit<SimulationState> {
 
       // Update state with new outsider status
       emit(state.copyWith(outsiderStatus: outsiderStatusData));
-
-      print('✅ Outsider status updated:');
-      print('   - Status: ${outsiderStatusData.status}');
-      print('   - Drone ID: ${outsiderStatusData.droneId}');
-      print(
-          '   - Position: (${outsiderStatusData.outsiderTelemetry.position.x}, ${outsiderStatusData.outsiderTelemetry.position.y}, ${outsiderStatusData.outsiderTelemetry.position.z})');
-      print('   - Battery: ${outsiderStatusData.outsiderTelemetry.battery}%');
-      print(
-          '   - Flight history points: ${outsiderStatusData.outsiderTelemetry.flightHistory.length}');
 
       // Check for final outsider status and trigger pop-up
       if (outsiderStatusData.status == 'blocked') {
