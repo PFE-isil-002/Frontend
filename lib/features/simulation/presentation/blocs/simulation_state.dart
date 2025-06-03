@@ -9,6 +9,8 @@ class SimulationState extends Equatable {
   final OutsiderStatusData? outsiderStatus;
   final String? anomalyDetectionMessage; // New: Message for anomaly pop-up
   final String? outsiderSimulationMessage; // New: Message for outsider status pop-up
+  final LatLng? startPoint; // Add startPoint to state
+  final LatLng? endPoint; // Add endPoint to state
 
   const SimulationState({
     this.droneDataList = const [],
@@ -17,6 +19,8 @@ class SimulationState extends Equatable {
     this.outsiderStatus,
     this.anomalyDetectionMessage, // Initialize new field
     this.outsiderSimulationMessage, // Initialize new field
+    this.startPoint, // Initialize new field
+    this.endPoint, // Initialize new field
   });
 
   SimulationState copyWith({
@@ -26,6 +30,8 @@ class SimulationState extends Equatable {
     OutsiderStatusData? outsiderStatus,
     String? anomalyDetectionMessage, // Add to copyWith
     String? outsiderSimulationMessage, // Add to copyWith
+    LatLng? startPoint, // Add to copyWith
+    LatLng? endPoint, // Add to copyWith
   }) {
     return SimulationState(
       droneDataList: droneDataList ?? this.droneDataList,
@@ -34,6 +40,8 @@ class SimulationState extends Equatable {
       outsiderStatus: outsiderStatus ?? this.outsiderStatus,
       anomalyDetectionMessage: anomalyDetectionMessage, // Allow null to clear message
       outsiderSimulationMessage: outsiderSimulationMessage, // Allow null to clear message
+      startPoint: startPoint, // Allow null to clear
+      endPoint: endPoint, // Allow null to clear
     );
   }
 
@@ -45,5 +53,7 @@ class SimulationState extends Equatable {
         outsiderStatus,
         anomalyDetectionMessage, // Add to props
         outsiderSimulationMessage, // Add to props
+        startPoint,
+        endPoint,
       ];
 }

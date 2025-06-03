@@ -4,6 +4,8 @@ import '../../../../core/websockets/websocket_client.dart';
 
 class SimulationRepository {
   final WebSocketClient client;
+  // Keep track of the internal subscription to the client's stream
+  StreamSubscription<Map<String, dynamic>>? _internalClientSubscription;
 
   SimulationRepository(this.client);
 
@@ -17,6 +19,10 @@ class SimulationRepository {
     required Map<String, double> endPoint,
     List<Map<String, double>>? waypoints,
   }) {
+    // --- IMPORTANT FIX: Cancel any previous internal subscription ---
+    _internalClientSubscription?.cancel();
+    _internalClientSubscription = null; // Clear the reference
+
     final payload = {
       'type': 'start_simulation',
       'data': {
@@ -32,48 +38,56 @@ class SimulationRepository {
     };
     client.send(payload);
 
-    // Create a new stream controller to manage the paced emission of events
-    final controller = StreamController<Map<String, dynamic>>();
+    // Create a new broadcast controller for the BLoC to listen to
+    final controller = StreamController<Map<String, dynamic>>.broadcast();
 
-    // Listen to the raw WebSocket stream and apply delay before re-emitting
-    client.stream
+    // --- IMPORTANT FIX: Re-assign the internal subscription for the new simulation ---
+    _internalClientSubscription = client.stream
+        .asBroadcastStream() // Ensure the client's stream is broadcast
         .map((event) => event as String)
         .map((raw) {
-          print('Raw WebSocket message: $raw'); // Debug: Log raw message
-          try {
-            return jsonDecode(raw) as Map<String, dynamic>;
-          } catch (e) {
-            print('Error decoding JSON: $e');
-            rethrow;
-          }
-        })
-        .listen((msg) async {
-          print('Decoded message: $msg'); // Debug: Log decoded message
-          print('Message type: ${msg['type']}'); // Debug: Log message type
-          
-          // Check if message type is one we want to handle
-          final messageType = msg['type'];
-          if (messageType == 'drone_data' ||
-              messageType == 'waypoint_collected' ||
-              messageType == 'batch_prediction_complete' ||
-              messageType == 'outsider_status') {
-            print('Processing message of type: $messageType'); // Debug: Confirm processing
-            controller.add(msg);
-          } else {
-            print('Ignoring message of type: $messageType'); // Debug: Log ignored messages
-          }
-        }, onDone: () {
-          print('WebSocket stream closed');
-          controller.close();
-        }, onError: (error) {
-          print('WebSocket stream error: $error');
-          controller.addError(error);
-        });
+      try {
+        return jsonDecode(raw) as Map<String, dynamic>;
+      } catch (e) {
+        print('Error decoding JSON: $e');
+        rethrow;
+      }
+    }).listen((msg) async {
+      print('Message type: ${msg['type']}');
+      final messageType = msg['type'];
+      // Only add relevant messages to the controller
+      if (messageType == 'drone_data' ||
+          messageType == 'waypoint_collected' ||
+          messageType == 'batch_prediction_complete' ||
+          messageType == 'outsider_status') {
+        controller.add(msg);
+      }
+    }, onDone: () {
+      print('WebSocket stream closed by client');
+      // Close the controller when the underlying WebSocket stream closes
+      controller.close();
+    }, onError: (error) {
+      print('WebSocket stream error in repository: $error');
+      controller.addError(error);
+      // Also close the controller on error
+      controller.close();
+    });
 
     return controller.stream;
   }
 
   void stopSimulation() {
-    client.send({'type': 'stop_simulation'});
+    print('Sending stop simulation command...');
+    client.send({'command': 'stop_simulation'});
+    // Also cancel the internal listener when the simulation is explicitly stopped
+    _internalClientSubscription?.cancel();
+    _internalClientSubscription = null;
+  }
+
+  void dispose() {
+    // Cancel the internal subscription when the repository itself is disposed
+    _internalClientSubscription?.cancel();
+    _internalClientSubscription = null;
+    client.disconnect();
   }
 }

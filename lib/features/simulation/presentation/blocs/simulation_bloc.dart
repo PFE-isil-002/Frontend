@@ -47,9 +47,14 @@ class SimulationBloc extends Cubit<SimulationState> {
       onError: (error, st) {
         print('❌ Simulation stream error: $error');
         print('Stack trace: $st');
-        emit(state.copyWith(anomalyDetectionMessage: 'Simulation error: $error'));
+        emit(state.copyWith(
+            anomalyDetectionMessage: 'Simulation error: $error'));
+        stopSimulation(); // Stop listening on error
       },
-      onDone: () => print('✅ Simulation stream closed.'),
+      onDone: () {
+        print('✅ Simulation stream closed.');
+        stopSimulation(); // Stop listening when done
+      },
     );
   }
 
@@ -78,7 +83,8 @@ class SimulationBloc extends Cubit<SimulationState> {
       print('❌ Error processing message type $messageType: $e');
       print('Stack trace: $st');
       print('Raw message: $message');
-      emit(state.copyWith(anomalyDetectionMessage: 'Error processing data: $e'));
+      emit(
+          state.copyWith(anomalyDetectionMessage: 'Error processing data: $e'));
     }
   }
 
@@ -114,11 +120,11 @@ class SimulationBloc extends Cubit<SimulationState> {
     final bool anomalyDetected = data['anomaly_detected'] as bool? ?? false;
     emit(state.copyWith(
       anomalyDetected: anomalyDetected,
-      anomalyDetectionMessage: anomalyDetected
-          ? 'Anomaly detected!'
-          : 'No anomaly detected.',
+      anomalyDetectionMessage:
+          anomalyDetected ? 'Anomaly detected!' : 'No anomaly detected.',
     ));
     print('🔍 Batch prediction complete. Anomaly detected: $anomalyDetected');
+    stopSimulation(); // Stop listening after batch prediction is complete
   }
 
   void _handleOutsiderStatus(Map<String, dynamic> message) {
@@ -147,22 +153,27 @@ class SimulationBloc extends Cubit<SimulationState> {
 
       // Check for final outsider status and trigger pop-up
       if (outsiderStatusData.status == 'blocked') {
-        print('🚨 Outsider drone BLOCKED! Emitting pop-up message.'); // Debug print
+        print(
+            '🚨 Outsider drone BLOCKED! Emitting pop-up message.'); // Debug print
         emit(state.copyWith(
             outsiderSimulationMessage:
                 'Outsider Drone Status: BLOCKED! Drone ID: ${outsiderStatusData.droneId}'));
+        stopSimulation(); // Stop listening after outsider drone is blocked
       } else if (outsiderStatusData.status == 'authenticated') {
-        print('✅ Outsider drone AUTHENTICATED! Emitting pop-up message.'); // Debug print
+        print(
+            '✅ Outsider drone AUTHENTICATED! Emitting pop-up message.'); // Debug print
         emit(state.copyWith(
             outsiderSimulationMessage:
                 'Outsider Drone Status: AUTHENTICATED! Drone ID: ${outsiderStatusData.droneId}'));
+        stopSimulation(); // Stop listening after outsider drone is authenticated
       }
     } catch (e, st) {
       print('❌ Failed to parse outsider status:');
       print('   Error: $e');
       print('   Stack: $st');
       print('   Raw data: $data');
-      emit(state.copyWith(outsiderSimulationMessage: 'Error parsing outsider status: $e'));
+      emit(state.copyWith(
+          outsiderSimulationMessage: 'Error parsing outsider status: $e'));
     }
   }
 

@@ -44,6 +44,7 @@ dependencies:
   model_viewer_plus: ^1.9.2
   fl_chart: ^0.71.0
   geoengine: ^1.0.3
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:

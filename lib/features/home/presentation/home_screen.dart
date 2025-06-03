@@ -1,133 +1,260 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900],
+      backgroundColor: Colors.grey.shade900,
       appBar: AppBar(
-        title: const Text(
-          'AI Model Performance Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          'ML Model Performance Dashboard',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
         ),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-        elevation: 2,
+        backgroundColor: Colors.grey.shade900, // Darker header
+        foregroundColor: Colors.teal, // Teal accent
+        elevation: 8,
+        shadowColor: const Color(0xFF7FDBDA).withOpacity(0.3),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Best Model Highlight
+                _buildBestModelCard(),
+                const SizedBox(height: 24),
+
+                // Performance Summary
+                _buildPerformanceSummary(),
+                const SizedBox(height: 24),
+
+                // Model Categories
+                _buildModelCategorySection(
+                  'Deep Learning Models',
+                  _getDeepLearningModels(),
+                  const Color(0xFF7FDBDA), // Teal
+                ),
+                const SizedBox(height: 20),
+
+                _buildModelCategorySection(
+                  'Machine Learning Models',
+                  _getMachineLearningModels(),
+                  const Color(0xFF415A77), // Blue-grey
+                ),
+                const SizedBox(height: 24),
+
+                // Confusion Matrices Section
+                _buildConfusionMatricesSection(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBestModelCard() {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 1200),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.teal, // Teal
+                  const Color(0xFF415A77), // Blue-grey
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7FDBDA).withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 2000),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, rotationValue, child) {
+                    return Transform.rotate(
+                      angle: rotationValue * 2 * 3.14159,
+                      child: const Icon(
+                        Icons.emoji_events,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'BEST PERFORMING MODEL',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'LSTM (256-128)',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildAnimatedMetricChip('95%', 'Accuracy', Colors.white),
+                    _buildAnimatedMetricChip('95%', 'Recall', Colors.white),
+                    _buildAnimatedMetricChip('21', 'Time Steps', Colors.white),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAnimatedMetricChip(String value, String label, Color textColor) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 1500),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, animationValue, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - animationValue)),
+          child: Opacity(
+            opacity: animationValue,
+            child: Column(
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: textColor.withOpacity(0.9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPerformanceSummary() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B263B),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7FDBDA).withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Machine Learning Model Comparison',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.teal,
-              ),
-            ),
-            const SizedBox(height: 12),
             Text(
-              'Cybersecurity Attack Detection Models',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[400],
-                fontStyle: FontStyle.italic,
+              'Performance Summary',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF7FDBDA),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Performance Overview Cards
-            _buildPerformanceOverview(),
-            const SizedBox(height: 24),
-
-            // RNN Model Section (Best Performer)
-            _buildModelSection(
-              title: 'Recurrent Neural Network (RNN)',
-              subtitle: '🏆 Champion - Deep Learning Excellence',
-              color: Colors.amber.shade400,
-              confusionMatrixPath: "assets/models/matriceconfusionrnn.png",
-              curvePath: "assets/models/courbernn.png",
-              icon: Icons.memory,
-              metrics: {
-                'Accuracy': '96.32%',
-                'Precision': '96%',
-                'Recall': '96%',
-                'F1-Score': '96%',
-              },
-              isTopPerformer: true,
-              isChampion: true,
-            ),
-
-            // SVM Model Section (Second Best)
-            _buildModelSection(
-              title: 'Support Vector Machine (SVM)',
-              subtitle: '🥈 Strong Traditional ML Performance',
-              color: Colors.green.shade400,
-              confusionMatrixPath: "assets/models/matriceconfusionSVM.png",
-              curvePath: "assets/models/courbesvm.png",
-              icon: Icons.linear_scale,
-              metrics: {
-                'Accuracy': '91.16%',
-                'Precision': '90%',
-                'Recall': '88%',
-                'F1-Score': '89%',
-              },
-              isTopPerformer: false,
-            ),
-
-            // KNN Model Section
-            _buildModelSection(
-              title: 'K-Nearest Neighbors (KNN)',
-              subtitle: 'Distance-based Classification',
-              color: Colors.blue.shade400,
-              confusionMatrixPath:
-                  "assets/models/matriceconfusionknnoptimise.png",
-              curvePath: "assets/models/courbeknn.png",
-              icon: Icons.scatter_plot,
-              metrics: {
-                'Accuracy': '88.44%',
-                'Precision': '90%',
-                'Recall': '83%',
-                'F1-Score': '86%',
-              },
-              additionalInfo: 'Best params: manhattan distance, k=3',
-            ),
-
-            // Random Forest Model Section
-            _buildModelSection(
-              title: 'Random Forest',
-              subtitle: 'Ensemble Learning Method',
-              color: Colors.orange.shade400,
-              confusionMatrixPath: "assets/models/matriceconfusionRF.png",
-              curvePath: "assets/models/courbeRF.png",
-              icon: Icons.account_tree,
-              metrics: {
-                'Accuracy': '88.4%',
-                'Precision': '89%',
-                'Recall': '88%',
-                'F1-Score': '88%',
-              },
-              additionalInfo: 'Best params: 200 estimators, max_depth=20',
-            ),
-
-            // Logistic Regression Model Section
-            _buildModelSection(
-              title: 'Logistic Regression',
-              subtitle: 'Linear Classification Model',
-              color: Colors.purple.shade400,
-              confusionMatrixPath: "assets/models/matriceconfusionLR.png",
-              curvePath: null,
-              icon: Icons.show_chart,
-              metrics: {
-                'Accuracy': '76.64%',
-                'Precision': '74%',
-                'Recall': '75%',
-                'F1-Score': '74%',
-              },
+            const SizedBox(height: 16),
+            Text(
+              'LSTM models demonstrate superior performance on long sequences, with the (256-128) architecture achieving the highest accuracy. Deep learning models generally outperform traditional machine learning approaches for temporal sequence analysis.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: const Color(0xFFE0E1DD),
+                height: 1.6,
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ],
         ),
@@ -135,411 +262,471 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPerformanceOverview() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.teal.shade800, Colors.teal.shade600],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildModelCategorySection(
+      String title, List<ModelResult> models, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Performance Summary',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryCard(
-                    'Best Model', 'RNN', '96.32%', Icons.star),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryCard(
-                    'Models Tested', '5', 'Complete', Icons.assessment),
-              ),
-            ],
-          ),
-        ],
-      ),
+        const SizedBox(height: 16),
+        ...models.asMap().entries.map((entry) {
+          int index = entry.key;
+          ModelResult model = entry.value;
+          return TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 600 + (index * 200)),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(50 * (1 - value), 0),
+                child: Opacity(
+                  opacity: value,
+                  child: _buildModelCard(model, color),
+                ),
+              );
+            },
+          );
+        }).toList(),
+      ],
     );
   }
 
-  Widget _buildSummaryCard(
-      String title, String value, String subtitle, IconData icon) {
+  Widget _buildModelCard(ModelResult model, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.white.withOpacity(0.6),
-            ),
-            textAlign: TextAlign.center,
+        color: const Color(0xFF1B263B),
+        borderRadius: BorderRadius.circular(16),
+        border: model.isBest
+            ? Border.all(color: const Color(0xFF7FDBDA), width: 2)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: model.isBest
+                ? const Color(0xFF7FDBDA).withOpacity(0.2)
+                : Colors.black.withOpacity(0.2),
+            blurRadius: model.isBest ? 15 : 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildModelSection({
-    required String title,
-    required String subtitle,
-    required Color color,
-    required String confusionMatrixPath,
-    String? curvePath,
-    required IconData icon,
-    required Map<String, String> metrics,
-    bool isTopPerformer = false,
-    bool isChampion = false,
-    String? additionalInfo,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 24),
-      elevation: isChampion ? 12 : (isTopPerformer ? 8 : 4),
-      color: Colors.grey[850],
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: isChampion
-            ? BorderSide(color: Colors.amber.shade400, width: 3)
-            : (isTopPerformer
-                ? BorderSide(color: Colors.green.shade400, width: 2)
-                : BorderSide.none),
-      ),
-      child: Container(
-        decoration: isChampion
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.amber.shade400.withOpacity(0.05),
-                    Colors.transparent,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              )
-            : null,
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Champion Badge (only for RNN)
-              if (isChampion) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.amber.shade400, Colors.amber.shade600],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.emoji_events, color: Colors.white, size: 16),
-                      SizedBox(width: 4),
-                      Text(
-                        'CHAMPION MODEL',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              // Model Header
-              Row(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // Left side - Model info
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          color.withOpacity(0.2),
-                          color.withOpacity(0.1)
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: color, size: 28),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          model.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
                             color: color,
                           ),
                         ),
-                        Text(
-                          subtitle,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[400],
-                            fontStyle: FontStyle.italic,
+                      ),
+                      if (model.isBest)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7FDBDA).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: const Color(0xFF7FDBDA), width: 1),
+                          ),
+                          child: Text(
+                            'BEST',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF7FDBDA),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildResultColumn(
+                            '21 Time Steps', model.accuracy21, model.recall21),
+                      ),
+                      Expanded(
+                        child: _buildResultColumn(
+                            '7 Time Steps', model.accuracy7, model.recall7),
+                      ),
+                    ],
+                  ),
+                  if (model.description.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      model.description,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFFE0E1DD).withOpacity(0.8),
+                        height: 1.4,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 20),
-
-              // Performance Metrics
+            ),
+            const SizedBox(width: 16),
+            // Right side - Confusion matrix image
+            if (model.confusionMatrixPath.isNotEmpty)
               Container(
-                padding: const EdgeInsets.all(16),
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
-                  color: isChampion
-                      ? Colors.grey[800]?.withOpacity(0.8)
-                      : Colors.grey[800],
                   borderRadius: BorderRadius.circular(12),
-                  border: isChampion
-                      ? Border.all(
-                          color: Colors.amber.shade400.withOpacity(0.3))
-                      : null,
+                  border: Border.all(
+                    color: const Color(0xFF415A77).withOpacity(0.5),
+                    width: 1,
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Performance Metrics',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[300],
-                          ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    model.confusionMatrixPath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        alignment: Alignment.center,
+                        color: const Color(0xFF415A77).withOpacity(0.2),
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: const Color(0xFF415A77),
+                          size: 24,
                         ),
-                        if (isChampion) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.trending_up,
-                            color: Colors.amber.shade400,
-                            size: 20,
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricItem(
-                              'Accuracy', metrics['Accuracy']!, Colors.green),
-                        ),
-                        Expanded(
-                          child: _buildMetricItem(
-                              'Precision', metrics['Precision']!, Colors.blue),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricItem(
-                              'Recall', metrics['Recall']!, Colors.orange),
-                        ),
-                        Expanded(
-                          child: _buildMetricItem(
-                              'F1-Score', metrics['F1-Score']!, Colors.purple),
-                        ),
-                      ],
-                    ),
-                    if (additionalInfo != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          additionalInfo,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: color,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+                      );
+                    },
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // Images Section
-              if (curvePath != null) ...[
-                // Two images side by side for models with curves
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildImageCard(
-                        title: 'Confusion Matrix',
-                        imagePath: confusionMatrixPath,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildImageCard(
-                        title: 'Learning Curve',
-                        imagePath: curvePath,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                // Single image for models without curves
-                _buildImageCard(
-                  title: 'Confusion Matrix',
-                  imagePath: confusionMatrixPath,
-                  color: color,
-                ),
-              ],
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMetricItem(String label, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+  Widget _buildResultColumn(String timeSteps, int accuracy, int recall) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          timeSteps,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF7FDBDA),
           ),
-          const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[400],
-            ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Accuracy: $accuracy%',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: const Color(0xFFE0E1DD),
+            fontWeight: FontWeight.w500,
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+        ),
+        Text(
+          'Recall: $recall%',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: const Color(0xFFE0E1DD),
+            fontWeight: FontWeight.w500,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildImageCard({
-    required String title,
-    required String imagePath,
-    required Color color,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[800],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-            ),
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-              textAlign: TextAlign.center,
-            ),
+  Widget _buildConfusionMatricesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Confusion Matrices Gallery',
+          style: GoogleFonts.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF7FDBDA),
           ),
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(12),
-              bottomRight: Radius.circular(12),
-            ),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 1.1,
+          children: [
+            _buildConfusionMatrixCard(
+                'KNN (k=7)', 'assets/models/matriceconfusionknn7.png'),
+            _buildConfusionMatrixCard(
+                'KNN (k=21)', 'assets/models/matriceconfusionknn21.png'),
+            _buildConfusionMatrixCard('Logistic Regression (7)',
+                'assets/models/matriceconfusionlr7.png'),
+            _buildConfusionMatrixCard('Logistic Regression (21)',
+                'assets/models/matriceconfusionlr21.png'),
+            _buildConfusionMatrixCard(
+                'SVM (7)', 'assets/models/matriceconfusionsvm7.png'),
+            _buildConfusionMatrixCard(
+                'SVM (21)', 'assets/models/matriceconfusionsvm21.png'),
+            _buildConfusionMatrixCard(
+                'LSTM (14-7-7)', 'assets/models/matriceconfusionlstm14-7-7.png',
+                isHighlighted: true),
+            _buildConfusionMatrixCard('LSTM (14-7-21)',
+                'assets/models/matriceconfusionlstm14-7-21.png',
+                isHighlighted: true),
+            _buildConfusionMatrixCard('LSTM (256-128-7)',
+                'assets/models/matriceconfusionlstm256-128-7.png',
+                isHighlighted: true),
+            _buildConfusionMatrixCard('LSTM (256-128-21)',
+                'assets/models/matriceconfusionlstm256-128-21.png',
+                isBest: true),
+            _buildConfusionMatrixCard(
+                'MLP (14-7-7)', 'assets/models/matriceconfusionmlp14-7-7.png'),
+            _buildConfusionMatrixCard('MLP (14-7-21)',
+                'assets/models/matriceconfusionmlp14-7-21.png'),
+            _buildConfusionMatrixCard('MLP (256-128-16-7)',
+                'assets/models/matriceconfusionmlp256-128-16-7.png'),
+            _buildConfusionMatrixCard('MLP (256-128-16-21)',
+                'assets/models/matriceconfusionmlp256-128-16-21.png'),
+            _buildConfusionMatrixCard(
+                'RNN (7)', 'assets/models/matriceconfusionrnn7.png'),
+            _buildConfusionMatrixCard(
+                'RNN (21)', 'assets/models/matriceconfusionrnn21.png'),
+          ],
+        ),
+      ],
     );
   }
+
+  Widget _buildConfusionMatrixCard(String title, String imagePath,
+      {bool isHighlighted = false, bool isBest = false}) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 800),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B263B),
+              borderRadius: BorderRadius.circular(16),
+              border: isBest
+                  ? Border.all(color: const Color(0xFF7FDBDA), width: 3)
+                  : isHighlighted
+                      ? Border.all(
+                          color: const Color(0xFF7FDBDA).withOpacity(0.5),
+                          width: 2)
+                      : Border.all(
+                          color: const Color(0xFF415A77).withOpacity(0.3),
+                          width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: isBest
+                      ? const Color(0xFF7FDBDA).withOpacity(0.3)
+                      : Colors.black.withOpacity(0.2),
+                  blurRadius: isBest ? 15 : 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isBest
+                        ? const Color(0xFF7FDBDA).withOpacity(0.1)
+                        : isHighlighted
+                            ? const Color(0xFF7FDBDA).withOpacity(0.05)
+                            : const Color(0xFF415A77).withOpacity(0.1),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isBest
+                                ? const Color(0xFF7FDBDA)
+                                : const Color(0xFFE0E1DD),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      if (isBest)
+                        Icon(Icons.star,
+                            color: const Color(0xFF7FDBDA), size: 16),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      imagePath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.image_not_supported,
+                            color: const Color(0xFF415A77),
+                            size: 32,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<ModelResult> _getDeepLearningModels() {
+    return [
+      ModelResult(
+        name: 'LSTM (256-128)',
+        accuracy21: 95,
+        recall21: 95,
+        accuracy7: 91,
+        recall7: 91,
+        isBest: true,
+        description:
+            'Best performing model with superior long sequence handling',
+        confusionMatrixPath: 'assets/models/matriceconfusionlstm256-128-21.png',
+      ),
+      ModelResult(
+        name: 'LSTM (14-7)',
+        accuracy21: 92,
+        recall21: 91,
+        accuracy7: 89,
+        recall7: 87,
+        description:
+            'Strong performance with good temporal dependency management',
+        confusionMatrixPath: 'assets/models/matriceconfusionlstm14-7-21.png',
+      ),
+      ModelResult(
+        name: 'MLP (256-128-16)',
+        accuracy21: 87,
+        recall21: 85,
+        accuracy7: 86,
+        recall7: 84,
+        description:
+            'Good performance on long sequences despite lack of recurrent structure',
+        confusionMatrixPath:
+            'assets/models/matriceconfusionmlp256-128-16-21.png',
+      ),
+      ModelResult(
+        name: 'MLP (14-7)',
+        accuracy21: 66,
+        recall21: 43,
+        accuracy7: 66,
+        recall7: 43,
+        description: 'Limited performance with simpler architecture',
+        confusionMatrixPath: 'assets/models/matriceconfusionmlp14-7-21.png',
+      ),
+      ModelResult(
+        name: 'RNN',
+        accuracy21: 71,
+        recall21: 70,
+        accuracy7: 79,
+        recall7: 73,
+        description:
+            'Better on shorter sequences, limited by simple architecture',
+        confusionMatrixPath: 'assets/models/matriceconfusionrnn21.png',
+      ),
+    ];
+  }
+
+  List<ModelResult> _getMachineLearningModels() {
+    return [
+      ModelResult(
+        name: 'KNN',
+        accuracy21: 86,
+        recall21: 79,
+        accuracy7: 80,
+        recall7: 77,
+        description:
+            'Best traditional ML model, effective use of proximity between observations',
+        confusionMatrixPath: 'assets/models/matriceconfusionknn21.png',
+      ),
+      ModelResult(
+        name: 'SVM',
+        accuracy21: 88,
+        recall21: 76,
+        accuracy7: 84,
+        recall7: 74,
+        description:
+            'Good robustness but performance decreases with reduced temporal information',
+        confusionMatrixPath: 'assets/models/matriceconfusionsvm21.png',
+      ),
+      ModelResult(
+        name: 'Logistic Regression',
+        accuracy21: 72,
+        recall21: 62,
+        accuracy7: 72,
+        recall7: 66,
+        description:
+            'Limited by inability to capture non-linear complexity of abnormal behaviors',
+        confusionMatrixPath: 'assets/models/matriceconfusionlr21.png',
+      ),
+    ];
+  }
+}
+
+class ModelResult {
+  final String name;
+  final int accuracy21;
+  final int recall21;
+  final int accuracy7;
+  final int recall7;
+  final bool isBest;
+  final String description;
+  final String confusionMatrixPath;
+
+  ModelResult({
+    required this.name,
+    required this.accuracy21,
+    required this.recall21,
+    required this.accuracy7,
+    required this.recall7,
+    this.isBest = false,
+    this.description = '',
+    this.confusionMatrixPath = '',
+  });
 }

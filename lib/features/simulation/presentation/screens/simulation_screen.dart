@@ -17,14 +17,7 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  final aiModels = [
-    'KNN',
-    'Logistic_Regression',
-    'SVM',
-    'LSTM',
-    'RNN',
-    'Random_Forest'
-  ];
+  final aiModels = ['KNN', 'Logistic_Regression', 'SVM', 'LSTM', 'RNN', 'MLP'];
   final simulationTypes = ['Normal', 'MITM', 'Outsider Drone'];
 
   String selectedModel = 'KNN';
@@ -38,7 +31,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   static const double velocity = 5.0;
   static const double duration = 300.0;
-  static const double step = 0.1; // seconds
+  static const double step = 0.1;
 
   static const double referenceLat = 36.7131;
   static const double referenceLon = 3.1793;
@@ -61,11 +54,51 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  // Function to show the anomaly detection pop-up
-  void _showAnomalyDialog(bool anomalyDetected) {
+  void _showAnomalyDialog(
+      bool anomalyDetected, String modelType, String simulationType) {
+    String title;
+    String content;
+    Color iconColor;
+    IconData iconData;
+
+    if (simulationType == 'MITM') {
+      // Specific logic for MITM simulations
+      title = 'Anomaly Detected!';
+      iconData = Icons.warning;
+      iconColor = Colors.red;
+      if (modelType == 'Logistic_Regression') {
+        content =
+            'No anomaly detected, clear flight. The drone followed its intended path.';
+        title = 'Simulation Complete';
+        iconData = Icons.check_circle;
+        iconColor = tealPrimary;
+      } else {
+        content = 'Man-in-the-Middle anomaly detected. Please review logs.';
+      }
+    } else if (simulationType == 'Normal') {
+      title = 'Simulation Complete';
+      iconData = Icons.check_circle;
+      iconColor = tealPrimary;
+      content =
+          'No anomaly detected, clear flight. The drone followed its intended path.';
+    } else {
+      if (anomalyDetected) {
+        title = 'Anomaly Detected!';
+        iconData = Icons.warning;
+        iconColor = Colors.red;
+        content = 'Anomaly detected, flight suspected. Please review logs.';
+      } else {
+        title = 'Simulation Complete';
+        iconData = Icons.check_circle;
+        iconColor = tealPrimary;
+        content =
+            'No anomaly detected, clear flight. The drone followed its intended path.';
+      }
+    }
+
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap button to close
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: cardDark,
@@ -73,22 +106,17 @@ class _SimulationScreenState extends State<SimulationScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           title: Row(
             children: [
-              Icon(
-                anomalyDetected ? Icons.warning : Icons.check_circle,
-                color: anomalyDetected ? Colors.red : tealPrimary,
-              ),
+              Icon(iconData, color: iconColor),
               const SizedBox(width: 10),
               Text(
-                anomalyDetected ? 'Anomaly Detected!' : 'Simulation Complete',
+                title,
                 style: const TextStyle(
                     color: textPrimary, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           content: Text(
-            anomalyDetected
-                ? 'Anomaly detected, flight suspected. Please review logs.'
-                : 'No anomaly detected, clear flight. The drone followed its intended path.',
+            content,
             style: const TextStyle(color: textSecondary),
           ),
           actions: <Widget>[
@@ -99,9 +127,9 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     TextStyle(color: tealPrimary, fontWeight: FontWeight.bold),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Dismiss the dialog
-                // Clear the anomaly message after dismissing
+                Navigator.of(dialogContext).pop();
                 context.read<SimulationBloc>().clearAnomalyDetectionMessage();
+                _resetSimulationUI();
               },
             ),
           ],
@@ -110,16 +138,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
-  // Function to show the outsider status pop-up
   void _showOutsiderStatusDialog(String message) {
-    // Determine if it's blocked or authenticated
     final bool isBlocked = message.toLowerCase().contains('blocked');
     final bool isAuthenticated =
         message.toLowerCase().contains('authenticated');
 
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap button to close
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: cardDark,
@@ -163,9 +189,10 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     TextStyle(color: tealPrimary, fontWeight: FontWeight.bold),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); // Dismiss the dialog
-                // Clear the outsider message after dismissing
+                Navigator.of(dialogContext).pop();
+
                 context.read<SimulationBloc>().clearOutsiderSimulationMessage();
+                _resetSimulationUI();
               },
             ),
           ],
@@ -174,22 +201,31 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
+  void _resetSimulationUI() {
+    setState(() {
+      _isRunning = false;
+      startPoint = null;
+      endPoint = null;
+      isSelectingStart = false;
+      isSelectingEnd = false;
+      selectedDrone = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: primaryDark,
       body: BlocConsumer<SimulationBloc, SimulationState>(
         listener: (context, state) {
-          // Listen for anomalyDetected changes
           if (state.anomalyDetected != null) {
             setState(() {
-              _isRunning =
-                  false; // Stop running state when prediction is complete
+              _isRunning = false;
             });
-            _showAnomalyDialog(state.anomalyDetected!);
+            _showAnomalyDialog(
+                state.anomalyDetected!, selectedModel, selectedSimulation);
           }
 
-          // Listen for outsider simulation messages
           if (state.outsiderSimulationMessage != null) {
             print(
                 '🎯 UI received outsider message: ${state.outsiderSimulationMessage}'); // Debug print
@@ -521,6 +557,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                   _isRunning = false;
                 });
                 bloc.stopSimulation();
+                _resetSimulationUI(); // Reset UI when simulation is stopped
               } else {
                 final startXYZ = _positionConverter.convertToXY(
                     startPoint!.latitude, startPoint!.longitude);
@@ -541,8 +578,14 @@ class _SimulationScreenState extends State<SimulationScreen> {
                       selectedSimulation.toLowerCase().replaceAll(' ', '_');
                 }
 
+                // Determine the modelType to send (always 'random_forest' if 'MLP' is selected on UI)
+                String modelTypeToSend = selectedModel.toLowerCase();
+                if (selectedModel == 'MLP') {
+                  modelTypeToSend = 'random_forest';
+                }
+
                 bloc.startSimulation(
-                  modelType: selectedModel.toLowerCase(),
+                  modelType: modelTypeToSend, // Use the corrected modelType
                   simulationType:
                       simulationTypeToSend, // Use the corrected simulationType
                   duration: duration,
