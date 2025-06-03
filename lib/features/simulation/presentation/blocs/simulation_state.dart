@@ -51,8 +51,8 @@ class SimulationState extends Equatable {
         collectedWaypoints,
         anomalyDetected,
         outsiderStatus,
-        anomalyDetectionMessage, // Add to props
-        outsiderSimulationMessage, // Add to props
+        anomalyDetectionMessage, 
+        outsiderSimulationMessage, 
         startPoint,
         endPoint,
       ];

@@ -17,7 +17,14 @@ class SimulationScreen extends StatefulWidget {
 }
 
 class _SimulationScreenState extends State<SimulationScreen> {
-  final aiModels = ['KNN', 'Logistic_Regression', 'SVM', 'LSTM', 'RNN', 'MLP'];
+  final aiModels = [
+    'KNN',
+    'Logistic_Regression',
+    'SVM',
+    'LSTM',
+    'RNN',
+    'MLP' // Replaced Random_Forest with MLP for UI
+  ];
   final simulationTypes = ['Normal', 'MITM', 'Outsider Drone'];
 
   String selectedModel = 'KNN';
@@ -31,7 +38,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
 
   static const double velocity = 5.0;
   static const double duration = 300.0;
-  static const double step = 0.1;
+  static const double step = 0.1; // seconds
 
   static const double referenceLat = 36.7131;
   static const double referenceLon = 3.1793;
@@ -67,21 +74,25 @@ class _SimulationScreenState extends State<SimulationScreen> {
       iconData = Icons.warning;
       iconColor = Colors.red;
       if (modelType == 'Logistic_Regression') {
+        // Logistic Regression is the exception for MITM
         content =
             'No anomaly detected, clear flight. The drone followed its intended path.';
         title = 'Simulation Complete';
         iconData = Icons.check_circle;
         iconColor = tealPrimary;
       } else {
+        // All other models (including MLP) detect anomaly in MITM
         content = 'Man-in-the-Middle anomaly detected. Please review logs.';
       }
     } else if (simulationType == 'Normal') {
+      // Specific logic for Normal simulations
       title = 'Simulation Complete';
       iconData = Icons.check_circle;
       iconColor = tealPrimary;
       content =
-          'No anomaly detected, clear flight. The drone followed its intended path.';
+          'No anomaly detected, clear flight. The drone followed its intended path.'; // All models (including MLP) get no anomaly in Normal
     } else {
+      // Default behavior for other simulation types or when 'anomalyDetected' flag is true for 'Outsider Drone'
       if (anomalyDetected) {
         title = 'Anomaly Detected!';
         iconData = Icons.warning;
@@ -129,7 +140,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 context.read<SimulationBloc>().clearAnomalyDetectionMessage();
-                _resetSimulationUI();
+                _resetSimulationUI(); // Reset UI after dialog is dismissed
               },
             ),
           ],
@@ -138,14 +149,16 @@ class _SimulationScreenState extends State<SimulationScreen> {
     );
   }
 
+  // Function to show the outsider status pop-up
   void _showOutsiderStatusDialog(String message) {
+    // Determine if it's blocked or authenticated
     final bool isBlocked = message.toLowerCase().contains('blocked');
     final bool isAuthenticated =
         message.toLowerCase().contains('authenticated');
 
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // User must tap button to close
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: cardDark,
@@ -189,10 +202,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     TextStyle(color: tealPrimary, fontWeight: FontWeight.bold),
               ),
               onPressed: () {
-                Navigator.of(dialogContext).pop();
-
-                context.read<SimulationBloc>().clearOutsiderSimulationMessage();
-                _resetSimulationUI();
+                Navigator.of(dialogContext).pop(); 
               },
             ),
           ],
@@ -218,17 +228,18 @@ class _SimulationScreenState extends State<SimulationScreen> {
       backgroundColor: primaryDark,
       body: BlocConsumer<SimulationBloc, SimulationState>(
         listener: (context, state) {
+          // Listen for anomalyDetected changes
           if (state.anomalyDetected != null) {
             setState(() {
-              _isRunning = false;
+              _isRunning =
+                  false; // Stop running state when prediction is complete
             });
             _showAnomalyDialog(
                 state.anomalyDetected!, selectedModel, selectedSimulation);
           }
 
+          // Listen for outsider simulation messages
           if (state.outsiderSimulationMessage != null) {
-            print(
-                '🎯 UI received outsider message: ${state.outsiderSimulationMessage}'); // Debug print
             _showOutsiderStatusDialog(state.outsiderSimulationMessage!);
           }
         },

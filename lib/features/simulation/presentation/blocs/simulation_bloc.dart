@@ -153,22 +153,15 @@ class SimulationBloc extends Cubit<SimulationState> {
 
       // Check for final outsider status and trigger pop-up
       if (outsiderStatusData.status == 'blocked') {
-        print(
-            '🚨 Outsider drone BLOCKED! Emitting pop-up message.'); // Debug print
         emit(state.copyWith(
             outsiderSimulationMessage:
                 'Outsider Drone Status: BLOCKED! Drone ID: ${outsiderStatusData.droneId}'));
-        stopSimulation(); // Stop listening after outsider drone is blocked
       } else if (outsiderStatusData.status == 'authenticated') {
-        print(
-            '✅ Outsider drone AUTHENTICATED! Emitting pop-up message.'); // Debug print
         emit(state.copyWith(
             outsiderSimulationMessage:
                 'Outsider Drone Status: AUTHENTICATED! Drone ID: ${outsiderStatusData.droneId}'));
-        stopSimulation(); // Stop listening after outsider drone is authenticated
       }
     } catch (e, st) {
-      print('❌ Failed to parse outsider status:');
       print('   Error: $e');
       print('   Stack: $st');
       print('   Raw data: $data');
