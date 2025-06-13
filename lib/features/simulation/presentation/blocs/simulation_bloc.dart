@@ -22,13 +22,13 @@ class SimulationBloc extends Cubit<SimulationState> {
     required Map<String, double> endPoint,
     List<Map<String, double>>? waypoints,
   }) {
-    // Clear any previous data and reset anomaly status and messages
+  
     emit(const SimulationState());
 
     // Cancel old subscription
     _subscription?.cancel();
 
-    // New subscription on the broadcast stream
+   
     _subscription = repository
         .startSimulation(
       modelType: modelType,
@@ -48,11 +48,11 @@ class SimulationBloc extends Cubit<SimulationState> {
         print('Stack trace: $st');
         emit(state.copyWith(
             anomalyDetectionMessage: 'Simulation error: $error'));
-        stopSimulation(); // Stop listening on error
+        stopSimulation();
       },
       onDone: () {
         print('✅ Simulation stream closed.');
-        stopSimulation(); // Stop listening when done
+        stopSimulation(); 
       },
     );
   }
@@ -111,7 +111,6 @@ class SimulationBloc extends Cubit<SimulationState> {
       return;
     }
 
-    // Assuming the 'batch_prediction_complete' message contains an 'anomaly_detected' field
     final bool anomalyDetected = data['anomaly_detected'] as bool? ?? false;
     emit(state.copyWith(
       anomalyDetected: anomalyDetected,
@@ -119,8 +118,7 @@ class SimulationBloc extends Cubit<SimulationState> {
           anomalyDetected ? 'Anomaly detected!' : 'No anomaly detected.',
     ));
 
-    stopSimulation(); // Stop listening after batch prediction is complete
-  }
+    stopSimulation();
 
   void _handleOutsiderStatus(Map<String, dynamic> message) {
     print('👤 Processing outsider status message...');
@@ -133,10 +131,10 @@ class SimulationBloc extends Cubit<SimulationState> {
     try {
       final outsiderStatusData = OutsiderStatusData.fromMap(data);
 
-      // Update state with new outsider status
+     
       emit(state.copyWith(outsiderStatus: outsiderStatusData));
 
-      // Check for final outsider status and trigger pop-up
+      
       if (outsiderStatusData.status == 'blocked') {
         emit(state.copyWith(
             outsiderSimulationMessage:
@@ -160,15 +158,11 @@ class SimulationBloc extends Cubit<SimulationState> {
     repository.stopSimulation();
     _subscription?.cancel();
     _subscription = null;
-    emit(const SimulationState()); // Reset state completely
+    emit(const SimulationState()); 
   }
-
-  // Method to acknowledge and clear anomaly detection message
   void clearAnomalyDetectionMessage() {
     emit(state.copyWith(anomalyDetectionMessage: null));
   }
-
-  // Method to acknowledge and clear outsider simulation message
   void clearOutsiderSimulationMessage() {
     emit(state.copyWith(outsiderSimulationMessage: null));
   }

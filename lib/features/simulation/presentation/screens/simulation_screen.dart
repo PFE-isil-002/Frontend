@@ -60,42 +60,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
     String content;
     Color iconColor;
     IconData iconData;
-
-    if (simulationType == 'MITM') {
-      title = 'Anomaly Detected!';
-      iconData = Icons.warning;
-      iconColor = Colors.red;
-      if (modelType == 'Logistic_Regression') {
-        content =
-            'No anomaly detected, clear flight. The drone followed its intended path.';
-        title = 'Simulation Complete';
-        iconData = Icons.check_circle;
-        iconColor = tealPrimary;
-      } else {
-        content = 'Man-in-the-Middle anomaly detected. Please review logs.';
-      }
-    } else if (simulationType == 'Normal') {
-      // Specific logic for Normal simulations
-      title = 'Simulation Complete';
-      iconData = Icons.check_circle;
-      iconColor = tealPrimary;
-      content =
-          'No anomaly detected, clear flight. The drone followed its intended path.';
-    } else {
-      if (anomalyDetected) {
-        title = 'Anomaly Detected!';
-        iconData = Icons.warning;
-        iconColor = Colors.red;
-        content = 'Anomaly detected, flight suspected. Please review logs.';
-      } else {
-        title = 'Simulation Complete';
-        iconData = Icons.check_circle;
-        iconColor = tealPrimary;
-        content =
-            'No anomaly detected, clear flight. The drone followed its intended path.';
-      }
-    }
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -258,7 +222,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                     children: [
                       DroneMap(
                         droneDataList: simulationState
-                            .droneDataList, // <-- This is the key
+                            .droneDataList, 
                         referenceLat: referenceLat,
                         referenceLon: referenceLon,
                         onMapTap: (LatLng point) {
@@ -276,7 +240,7 @@ class _SimulationScreenState extends State<SimulationScreen> {
                         endPoint: endPoint,
                         collectedWaypoints: simulationState.collectedWaypoints,
                         outsiderStatus: simulationState
-                            .outsiderStatus, // Pass outsider status
+                            .outsiderStatus, 
                       ),
                       _buildStatusIndicators(),
                       if (selectedDrone != null)
@@ -573,11 +537,6 @@ class _SimulationScreenState extends State<SimulationScreen> {
                 }
 
                 String modelTypeToSend = selectedModel.toLowerCase();
-                if (selectedModel == 'MLP') {
-                  modelTypeToSend = 'random_forest';
-                } else if (selectedModel == 'RNN') {
-                  modelTypeToSend = 'knn';
-                }
 
                 bloc.startSimulation(
                   modelType: modelTypeToSend,
